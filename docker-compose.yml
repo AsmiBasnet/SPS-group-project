@@ -1,0 +1,23 @@
+# ================================================
+# PolicyGuard Docker Compose
+# Runs the Streamlit app as a container
+# Ollama stays on host machine (already running)
+# ================================================
+
+version: "3.8"
+
+services:
+  policyguard:
+    build: .
+    container_name: policyguard_app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./logs:/app/logs      # persist DB and FAISS index
+      - ./data:/app/data      # persist uploaded PDFs
+    env_file:
+      - .env
+    environment:
+      # Point container to Ollama running on host machine
+      - OLLAMA_URL=http://host.docker.internal:11434
+    restart: unless-stopped
