@@ -7,7 +7,7 @@ import time
 import os
 from src.pipeline import PolicyGuardPipeline
 from src.database import get_analytics
-from src.config import EMPLOYEE_TYPES, ISSUE_CATEGORIES
+from src.config import EMPLOYEE_TYPES, ISSUE_CATEGORIES, ADMIN_PASSWORD
 
 # ── Page Configuration ──────────────────────────
 st.set_page_config(
@@ -292,7 +292,7 @@ elif st.session_state.page == "📊 Admin Dashboard":
         placeholder="Enter admin password"
     )
     
-    if admin_pass != "admin123":
+    if admin_pass != ADMIN_PASSWORD:
         st.warning("Enter admin password to view dashboard")
         st.stop()
     
