@@ -33,6 +33,18 @@ DB_PATH = os.getenv("DB_PATH", "logs/policygard.db")
 # Admin
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
+# User accounts — role : (username, password)
+USERS = {
+    os.getenv("HR_MANAGER_USER", "hr_manager"): {
+        "password": os.getenv("HR_MANAGER_PASS", "hr123"),
+        "role":     "HR Manager"
+    },
+    os.getenv("EMPLOYEE_USER", "employee"): {
+        "password": os.getenv("EMPLOYEE_PASS", "emp123"),
+        "role":     "Employee"
+    }
+}
+
 # Supported documents
 SUPPORTED_POLICIES = [
     "FMLA",
