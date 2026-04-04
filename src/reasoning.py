@@ -79,7 +79,7 @@ Reply ONLY in this exact JSON:
                 "stop": ["```", "\n\n\n"]
             }
         },
-        timeout=120
+        timeout=300
     )
     
     raw = response.json().get("response", "").strip()
