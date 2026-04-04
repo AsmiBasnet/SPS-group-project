@@ -10,12 +10,12 @@ EMBED_MODEL = "nomic-embed-text"
 
 # RAG settings
 SIMILARITY_THRESHOLD = 0.65
-TOP_K_CHUNKS = 3
-CHUNK_SIZE = 400        # words per chunk
+TOP_K_CHUNKS = 2        # reduced from 3 — less context sent to LLM
+CHUNK_SIZE = 300        # reduced from 400 — smaller chunks, fewer input tokens
 CHUNK_OVERLAP = 50      # overlap between chunks
 
 # LLM settings
-MAX_TOKENS = 300
+MAX_TOKENS = 150        # reduced from 300 — JSON response never needs more
 CONTEXT_SIZE = 1024
 TEMPERATURE = 0
 
