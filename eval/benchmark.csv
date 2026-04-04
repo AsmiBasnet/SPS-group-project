@@ -1,0 +1,51 @@
+question,expected_decision,expected_conflict,employee_type,issue_category
+What are the eligibility requirements for FMLA leave?,CLARIFY,False,Full-time Regular,FMLA / Medical Leave
+How many weeks of FMLA leave am I entitled to?,CLARIFY,False,Full-time Regular,FMLA / Medical Leave
+Do I need to give advance notice for FMLA leave?,CLARIFY,False,Full-time Regular,FMLA / Medical Leave
+Can I take FMLA leave intermittently?,CLARIFY,False,Full-time Regular,FMLA / Medical Leave
+Does FMLA apply to part-time employees?,CLARIFY,False,Part-time Regular,FMLA / Medical Leave
+Can my employer deny my FMLA request?,ANSWER,False,Full-time Regular,FMLA / Medical Leave
+What documentation is required for FMLA leave?,ANSWER,False,Full-time Regular,FMLA / Medical Leave
+Is FMLA leave paid or unpaid?,ANSWER,False,Full-time Regular,FMLA / Medical Leave
+Can I use sick leave during FMLA?,FLAG_CONFLICT,True,Full-time Regular,FMLA / Medical Leave
+What happens to my benefits during FMLA leave?,ANSWER,False,Full-time Regular,FMLA / Medical Leave
+What is the process for reporting workplace harassment?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+Who should I contact if I experience harassment?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+What constitutes workplace harassment?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+Can I report harassment anonymously?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+What happens after I file a harassment complaint?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+How long does a harassment investigation take?,CLARIFY,False,Full-time Regular,Harassment / Discrimination
+Can a manager be disciplined for harassment?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+What protection do I have after reporting harassment?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+Is verbal harassment covered under the policy?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+What is the retaliation policy after a harassment report?,ANSWER,False,Full-time Regular,Harassment / Discrimination
+How many vacation days do full-time employees receive?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+Can sick leave be carried over to the next year?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+What happens to unused vacation days when I leave?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+How do I request vacation leave?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+How many sick days am I entitled to per year?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+Do I need a doctors note for sick leave?,CLARIFY,False,Full-time Regular,Vacation / Sick Leave
+Can I take sick leave for a family members illness?,CLARIFY,False,Full-time Regular,Vacation / Sick Leave
+What is the difference between sick leave and annual leave?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+Can vacation days be carried over to next year?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+How far in advance must I request vacation leave?,ANSWER,False,Full-time Regular,Vacation / Sick Leave
+What accommodations are available under ADA?,CLARIFY,False,Full-time Regular,ADA Accommodation
+How do I request an ADA accommodation?,ANSWER,False,Full-time Regular,ADA Accommodation
+Who decides if my ADA accommodation is approved?,ANSWER,False,Full-time Regular,ADA Accommodation
+Does ADA apply to mental health conditions?,ANSWER,False,Full-time Regular,ADA Accommodation
+Can my employer deny an ADA accommodation request?,CLARIFY,False,Full-time Regular,ADA Accommodation
+What is a reasonable accommodation under ADA?,ANSWER,False,Full-time Regular,ADA Accommodation
+Can I request a reduced work schedule under ADA?,FLAG_CONFLICT,True,Full-time Regular,ADA Accommodation
+Does ADA protection apply during probationary period?,CLARIFY,False,Probationary,ADA Accommodation
+What happens if ADA and FMLA requirements overlap?,FLAG_CONFLICT,True,Full-time Regular,ADA Accommodation
+How long does the ADA accommodation process take?,CLARIFY,False,Full-time Regular,ADA Accommodation
+How many absences trigger a verbal warning?,ANSWER,False,Full-time Regular,Other
+What is the difference between excused and unexcused absence?,ANSWER,False,Full-time Regular,Other
+What happens after three unexcused absences?,ANSWER,False,Full-time Regular,Other
+Can tardiness count toward disciplinary action?,ANSWER,False,Full-time Regular,Other
+How many times can I be late before disciplinary action?,ANSWER,False,Full-time Regular,Other
+Do I need to notify my manager before missing work?,ANSWER,False,Full-time Regular,Other
+What documentation is required for an excused absence?,CLARIFY,False,Full-time Regular,Other
+Can absenteeism lead to termination?,ANSWER,False,Full-time Regular,Other
+Does the absenteeism policy apply to contractors?,ANSWER,False,Contractor,Other
+What is the salary increment policy?,REFUSED,False,Full-time Regular,Other
