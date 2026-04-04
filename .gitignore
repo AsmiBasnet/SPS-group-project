@@ -19,6 +19,7 @@ build/
 # Data / indexes (runtime-generated)
 data/
 logs/faiss_index/
+logs/chroma_db/
 
 # Database (keep logs/ folder but ignore the db file)
 logs/*.db

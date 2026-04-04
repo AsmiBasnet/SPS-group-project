@@ -7,7 +7,7 @@ import time
 import os
 from src.pipeline import PolicyGuardPipeline
 from src.database import get_analytics
-from src.config import EMPLOYEE_TYPES, ISSUE_CATEGORIES, ADMIN_PASSWORD
+from src.config import EMPLOYEE_TYPES, ISSUE_CATEGORIES, ADMIN_PASSWORD, USERS
 
 # ── Page Configuration ──────────────────────────
 st.set_page_config(
@@ -16,6 +16,38 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ── Login Gate ──────────────────────────────────
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+if not st.session_state.logged_in:
+    st.title("🛡️ PolicyGuard")
+    st.subheader("Sign In")
+    st.caption("HR Compliance Intelligence Agent")
+    st.divider()
+
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+
+    if submitted:
+        user = USERS.get(username)
+        if user and user["password"] == password:
+            st.session_state.logged_in = True
+            st.session_state.role = user["role"]
+            st.rerun()
+        else:
+            st.error("Invalid username or password.")
+
+    st.divider()
+    st.caption("Demo accounts:")
+    st.caption("HR Manager → username: `hr_manager`  password: `hr123`")
+    st.caption("Employee   → username: `employee`    password: `emp123`")
+    st.stop()
 
 # ── Initialize Pipeline ─────────────────────────
 if "pipeline" not in st.session_state:
@@ -31,27 +63,47 @@ with st.sidebar:
     st.title("PolicyGuard")
     st.caption("HR Compliance Intelligence Agent")
     st.divider()
-    
-    # Navigation
-    page = st.radio(
-        "Navigation",
-        ["💬 Policy Chat", "📊 Admin Dashboard"],
-        label_visibility="collapsed"
-    )
-    st.session_state.page = page
-    
+
+    # Show logged-in user and role
+    role = st.session_state.role
+    role_icon = "👔" if role == "HR Manager" else "👤"
+    st.caption(f"{role_icon} Signed in as **{role}**")
+    if st.button("Sign Out", use_container_width=True):
+        for key in ["logged_in", "role", "pipeline", "chat_history", "page"]:
+            st.session_state.pop(key, None)
+        st.rerun()
+
     st.divider()
-    
-    # Document Upload
+
+    # Navigation — Dashboard only for HR Manager
+    if role == "HR Manager":
+        page = st.radio(
+            "Navigation",
+            ["💬 Policy Chat", "📊 Admin Dashboard"],
+            label_visibility="collapsed"
+        )
+    else:
+        page = "💬 Policy Chat"
+        st.caption("💬 Policy Chat")
+
+    st.session_state.page = page
+
+    st.divider()
+
+    # Document Upload — HR Manager only
     st.subheader("📁 Knowledge Base")
     
-    uploaded_files = st.file_uploader(
-        "Upload HR Policy PDFs",
-        type=["pdf"],
-        accept_multiple_files=True,
-        help="Upload one or more HR policy documents"
-    )
-    
+    if role != "HR Manager":
+        st.caption("Contact your HR Manager to upload policy documents.")
+        uploaded_files = []
+    else:
+        uploaded_files = st.file_uploader(
+            "Upload HR Policy PDFs",
+            type=["pdf"],
+            accept_multiple_files=True,
+            help="Upload one or more HR policy documents"
+        )
+
     if uploaded_files:
         for uploaded_file in uploaded_files:
             # Check if already loaded
