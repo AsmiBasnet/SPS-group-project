@@ -33,36 +33,16 @@ def reason(question, retrieved_chunks, session_context=""):
     if session_context:
         session_str = f"\nPrevious context: {session_context}\n"
     
-    prompt = f"""You are PolicyGuard, an HR policy compliance agent.
-
-STRICT RULES:
-- Use ONLY the policy context provided below
-- Never use outside knowledge or assumptions
-- If context is insufficient say so
-- Reply in JSON only — nothing else
-- Keep answer and reasoning brief
-
+    prompt = f"""HR policy agent. Use ONLY the context below. JSON reply only.
 {session_str}
-User Question: {question}
+Q: {question}
 
-Policy Context:
+Context:
 {context}
 
-Decision Rules:
-- ANSWER: You have clear policy evidence to answer
-- CLARIFY: Critical information is missing (e.g. employee type, tenure, hours worked)
-- FLAG_CONFLICT: Two or more clauses give contradicting guidance
+ANSWER=clear evidence | CLARIFY=missing info | FLAG_CONFLICT=clauses contradict
 
-Reply ONLY in this exact JSON:
-{{
-  "decision": "ANSWER or CLARIFY or FLAG_CONFLICT",
-  "answer": "clear one or two sentence answer",
-  "citation": "Section X.X or Policy Name Page X",
-  "reasoning": "brief explanation under 20 words",
-  "clarification_question": "only fill if CLARIFY decision",
-  "conflict_clause_a": "only fill if FLAG_CONFLICT",
-  "conflict_clause_b": "only fill if FLAG_CONFLICT"
-}}"""
+{{"decision":"ANSWER|CLARIFY|FLAG_CONFLICT","answer":"1-2 sentences","citation":"Section X or Page X","reasoning":"under 15 words","clarification_question":"","conflict_clause_a":"","conflict_clause_b":""}}"""
 
     # Call Ollama
     response = requests.post(
