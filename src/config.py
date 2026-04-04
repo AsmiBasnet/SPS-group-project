@@ -16,7 +16,7 @@ CHUNK_OVERLAP = 50      # overlap between chunks
 
 # LLM settings
 MAX_TOKENS = 300
-CONTEXT_SIZE = 2048
+CONTEXT_SIZE = 1024
 TEMPERATURE = 0
 
 # Session settings
