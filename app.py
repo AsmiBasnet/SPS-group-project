@@ -5,8 +5,11 @@
 import streamlit as st
 import time
 import os
+from datetime import datetime
 from src.pipeline import PolicyGuardPipeline
-from src.database import get_analytics
+from src.database import get_analytics, get_all_active_documents, get_document_versions
+from src.report import generate_audit_report
+from src.gap_detector import detect_gaps
 from src.config import EMPLOYEE_TYPES, ISSUE_CATEGORIES, ADMIN_PASSWORD, USERS
 
 # ── Page Configuration ──────────────────────────
@@ -126,8 +129,12 @@ with st.sidebar:
                     chunk_count = st.session_state.pipeline.load_document(
                         save_path, file_size
                     )
-                    
-                st.success(f"✅ {uploaded_file.name}")
+
+                    # Show version history
+                    versions = get_document_versions(uploaded_file.name)
+                    v = versions[0]["version"] if versions else 1
+
+                st.success(f"✅ {uploaded_file.name}  —  v{v}")
     
     # Show loaded documents
     if st.session_state.pipeline.loaded_documents:
@@ -397,7 +404,7 @@ elif st.session_state.page == "📊 Admin Dashboard":
             )
     
     st.divider()
-    
+
     # Recent Queries Table
     st.subheader("Recent Queries")
     if not analytics["recent_queries"].empty:
@@ -407,3 +414,55 @@ elif st.session_state.page == "📊 Admin Dashboard":
         )
     else:
         st.caption("No queries yet")
+
+    st.divider()
+
+    # ── Policy Gap Detection ─────────────────────
+    st.subheader("🔍 Policy Gap Detection")
+    st.caption("Scans your uploaded documents and flags missing HR topics.")
+
+    if st.session_state.pipeline.chunks:
+        covered, gaps, coverage = detect_gaps(st.session_state.pipeline.chunks)
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Coverage", f"{coverage}%")
+        col2.metric("Topics Covered", len(covered))
+        col3.metric("Gaps Found", len(gaps))
+
+        if gaps:
+            st.error(f"**{len(gaps)} missing policy topic(s) detected:**")
+            for g in gaps:
+                st.markdown(f"- ❌ {g}")
+        else:
+            st.success("✅ All standard HR topics are covered.")
+
+        if covered:
+            with st.expander("✅ Covered topics"):
+                for c in covered:
+                    st.markdown(f"- ✅ {c}")
+    else:
+        st.info("Upload documents to run gap detection.")
+
+    st.divider()
+
+    # ── PDF Audit Report Export ──────────────────
+    st.subheader("📄 Export Audit Report")
+    st.caption("Download a PDF of the full query history and document log.")
+
+    if st.button("⬇️ Generate PDF Report", type="primary"):
+        try:
+            active_docs = get_all_active_documents()
+            queries_list = analytics["recent_queries"].to_dict("records") \
+                if not analytics["recent_queries"].empty else []
+
+            pdf_bytes = generate_audit_report(queries_list, active_docs)
+
+            st.download_button(
+                label="📥 Download Report PDF",
+                data=pdf_bytes,
+                file_name=f"policyguard_audit_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"Could not generate report: {e}")

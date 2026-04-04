@@ -46,7 +46,9 @@ def init_database():
                 upload_date TEXT NOT NULL,
                 pages INTEGER,
                 chunks INTEGER,
-                file_size_kb REAL
+                file_size_kb REAL,
+                version INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'active'
             )
         """)
 
@@ -115,29 +117,113 @@ def log_query(
 
 
 def log_document(filename, pages, chunks, file_size_kb):
-    """Log uploaded document metadata."""
+    """
+    Log uploaded document metadata with auto versioning.
+    Each re-upload of the same filename gets version + 1.
+    Previous versions are marked as 'superseded'.
+    """
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
+        # Check how many times this file has been uploaded before
+        cursor.execute(
+            "SELECT COUNT(*) FROM documents WHERE filename = ?",
+            (filename,)
+        )
+        previous_count = cursor.fetchone()[0]
+        version = previous_count + 1
+
+        # Mark all previous versions of this file as superseded
+        if previous_count > 0:
+            cursor.execute(
+                "UPDATE documents SET status = 'superseded' WHERE filename = ?",
+                (filename,)
+            )
+
+        # Insert new version as active
         cursor.execute("""
             INSERT INTO documents (
-                filename, upload_date, pages, chunks, file_size_kb
-            ) VALUES (?, ?, ?, ?, ?)
+                filename, upload_date, pages, chunks, file_size_kb,
+                version, status
+            ) VALUES (?, ?, ?, ?, ?, ?, 'active')
         """, (
             filename,
             datetime.now().isoformat(),
             pages,
             chunks,
-            file_size_kb
+            file_size_kb,
+            version
         ))
 
         conn.commit()
         conn.close()
 
+        if version > 1:
+            print(f"📄 {filename} — version {version} uploaded (previous marked superseded)")
+        return version
+
     except Exception as e:
         print(f"❌ log_document failed: {e}")
         raise
+
+
+def get_document_versions(filename):
+    """Return full version history for a document."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT version, upload_date, pages, chunks, file_size_kb, status
+            FROM documents
+            WHERE filename = ?
+            ORDER BY version DESC
+        """, (filename,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            {
+                "version":    r[0],
+                "uploaded":   r[1],
+                "pages":      r[2],
+                "chunks":     r[3],
+                "size_kb":    r[4],
+                "status":     r[5]
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"❌ get_document_versions failed: {e}")
+        return []
+
+
+def get_all_active_documents():
+    """Return only the latest active version of each document."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT filename, upload_date, pages, chunks, file_size_kb, version
+            FROM documents
+            WHERE status = 'active'
+            ORDER BY upload_date DESC
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            {
+                "filename":  r[0],
+                "uploaded":  r[1],
+                "pages":     r[2],
+                "chunks":    r[3],
+                "size_kb":   r[4],
+                "version":   r[5]
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"❌ get_all_active_documents failed: {e}")
+        return []
 
 
 def get_analytics():
