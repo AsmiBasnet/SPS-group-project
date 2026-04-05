@@ -16,6 +16,7 @@ from src.database import (
 )
 from src.report import generate_audit_report
 from src.gap_detector import detect_gaps
+from src.health_score import compute_health_score
 from src.config import (
     EMPLOYEE_TYPES, ISSUE_CATEGORIES,
     USERS, POLICIES_FOLDER
@@ -492,6 +493,84 @@ elif page == "📊 Dashboard":
         st.error(f"No data yet — start asking questions first. ({e})")
         st.stop()
 
+    # ── Policy Health Score ──────────────────────
+    active_docs = get_all_active_documents()
+    hs = compute_health_score(
+        st.session_state.pipeline.chunks,
+        active_docs
+    )
+
+    score_color = {
+        "green":  "#2d6a4f",
+        "orange": "#e76f51",
+        "red":    "#c9184a"
+    }.get(hs["color"], "#333333")
+
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+        ">
+            <div style="display:flex; align-items:center; gap:32px; flex-wrap:wrap;">
+                <div style="text-align:center; min-width:110px;">
+                    <div style="
+                        font-size: 64px;
+                        font-weight: 900;
+                        color: {score_color};
+                        line-height: 1;
+                    ">{hs['score']}</div>
+                    <div style="
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: {score_color};
+                    ">/ 100  Grade {hs['grade']}</div>
+                    <div style="
+                        font-size: 12px;
+                        color: #aaaaaa;
+                        margin-top: 4px;
+                    ">Policy Health Score</div>
+                </div>
+                <div style="flex:1; min-width:220px;">
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#cccccc; font-size:13px;">📋 Coverage</span>
+                            <span style="color:#ffffff; font-weight:700;">{hs['coverage_score']} / 40</span>
+                        </div>
+                        <div style="background:#2a2a4a; border-radius:6px; height:8px; margin-top:4px;">
+                            <div style="background:{score_color}; width:{int(hs['coverage_score']/40*100)}%; height:8px; border-radius:6px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#cccccc; font-size:13px;">🕐 Freshness</span>
+                            <span style="color:#ffffff; font-weight:700;">{hs['freshness_score']} / 30</span>
+                        </div>
+                        <div style="background:#2a2a4a; border-radius:6px; height:8px; margin-top:4px;">
+                            <div style="background:{score_color}; width:{int(hs['freshness_score']/30*100)}%; height:8px; border-radius:6px;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#cccccc; font-size:13px;">⚖️ Consistency</span>
+                            <span style="color:#ffffff; font-weight:700;">{hs['consistency_score']} / 30</span>
+                        </div>
+                        <div style="background:#2a2a4a; border-radius:6px; height:8px; margin-top:4px;">
+                            <div style="background:{score_color}; width:{int(hs['consistency_score']/30*100)}%; height:8px; border-radius:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    {''.join([f'<div style="color:#cccccc; font-size:12px; margin-bottom:6px;">{i}</div>' for i in hs['insights']])}
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     # KPI row
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Queries",       analytics["total_queries"])
@@ -523,30 +602,21 @@ elif page == "📊 Dashboard":
 
     st.divider()
 
-    # Policy gap detection
-    st.subheader("🔍 Policy Gap Detection")
-    st.caption("Scans indexed documents and flags missing HR topics.")
-
-    if st.session_state.pipeline.chunks:
-        covered, gaps, coverage = detect_gaps(st.session_state.pipeline.chunks)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Coverage",       f"{coverage}%")
-        c2.metric("Topics Covered", len(covered))
-        c3.metric("Gaps Found",     len(gaps))
-
-        if gaps:
-            st.error(f"**{len(gaps)} missing policy topic(s):**")
-            for g in gaps:
-                st.markdown(f"- ❌ {g}")
-        else:
-            st.success("✅ All standard HR topics are covered.")
-
-        if covered:
-            with st.expander("✅ Covered topics"):
-                for c in covered:
-                    st.markdown(f"- ✅ {c}")
+    # Policy gap detail (expanded from health score)
+    st.subheader("🔍 Policy Gap Detail")
+    if hs["gaps"]:
+        st.error(f"**{len(hs['gaps'])} missing topic(s):**")
+        for g in hs["gaps"]:
+            st.markdown(f"- ❌ {g}")
+    elif st.session_state.pipeline.chunks:
+        st.success("✅ All standard HR topics are covered.")
     else:
         st.info("Upload documents to run gap detection.")
+
+    if hs["covered"]:
+        with st.expander("✅ View covered topics"):
+            for c in hs["covered"]:
+                st.markdown(f"- ✅ {c}")
 
     st.divider()
 
