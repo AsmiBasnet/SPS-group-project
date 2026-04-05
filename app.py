@@ -99,6 +99,8 @@ if "auto_loaded" not in st.session_state:
     st.session_state.auto_loaded = False
 if "anonymous_mode" not in st.session_state:
     st.session_state.anonymous_mode = False
+if "last_scan_report" not in st.session_state:
+    st.session_state.last_scan_report = {}   # filename → [conflict dicts]
 
 # ── A3: Auto-load from /policies folder ──────────
 # Runs once per session at startup
@@ -467,12 +469,17 @@ elif page == "📋 Document Manager":
                     )
                     versions = get_document_versions(fname)
                     v = versions[0]["version"] if versions else 1
+                    # Capture conflict scan results produced during load
+                    scan = st.session_state.pipeline.scan_results.get(fname, [])
+                    st.session_state.last_scan_report[fname] = scan
                     results_log.append(
-                        {"file": fname, "status": "✅", "version": f"v{v}"}
+                        {"file": fname, "status": "✅", "version": f"v{v}",
+                         "conflicts": scan}
                     )
                 except Exception as e:
                     results_log.append(
-                        {"file": fname, "status": "❌", "version": str(e)}
+                        {"file": fname, "status": "❌", "version": str(e),
+                         "conflicts": []}
                     )
 
                 progress.progress(
@@ -491,9 +498,51 @@ elif page == "📋 Document Manager":
                 f"{st.session_state.pipeline.chunk_count} total sections in knowledge base."
             )
             for r in results_log:
-                st.caption(
-                    f"{r['status']} {r['file']} — {r['version']}"
+                conflict_count = len(r.get("conflicts", []))
+                conflict_badge = (
+                    f"  ⚠️ {conflict_count} conflict(s) found"
+                    if conflict_count else "  ✅ No conflicts"
+                ) if r["status"] == "✅" else ""
+                st.caption(f"{r['status']} {r['file']} — {r['version']}{conflict_badge}")
+
+            # ── Conflict Scan Report ─────────────────
+            total_conflicts = sum(
+                len(r.get("conflicts", [])) for r in results_log
+            )
+            if total_conflicts > 0:
+                st.divider()
+                st.error(
+                    f"🔴 **Proactive Conflict Scan** — "
+                    f"{total_conflicts} potential conflict(s) detected across uploaded documents. "
+                    f"Review before using these policies."
                 )
+                for r in results_log:
+                    for c in r.get("conflicts", []):
+                        with st.expander(
+                            f"⚠️ Conflict: **{c['new_source']}** vs **{c['existing_src']}** "
+                            f"(similarity {c['similarity']:.0%})"
+                        ):
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.markdown(
+                                    f"**📄 {c['new_source']}** — Page {c['new_page']}"
+                                )
+                                st.info(c["new_text"][:300])
+                            with col2:
+                                st.markdown(
+                                    f"**📄 {c['existing_src']}** — Page {c['existing_page']}"
+                                )
+                                st.warning(c["existing_text"][:300])
+                            st.caption(f"🤖 LLM assessment: {c['reason']}")
+                            st.error(
+                                "⚠️ Do not use conflicting policies until an HR Director resolves this."
+                            )
+            elif any(r["status"] == "✅" for r in results_log):
+                # Only show "clean" message if at least 2 docs were ever loaded
+                # (first upload has nothing to compare against)
+                prior = len(st.session_state.pipeline.loaded_documents)
+                if prior > 1:
+                    st.success("✅ Conflict scan complete — no contradictions detected.")
 
     # ── Currently loaded documents ───────────────
     st.divider()

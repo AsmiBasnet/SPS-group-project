@@ -15,6 +15,7 @@ from src.guardrails import (
     get_conflict_severity
 )
 from src.database import init_database, log_query, log_document
+from src.conflict_scanner import scan_for_conflicts
 
 
 class PolicyGuardPipeline:
@@ -27,6 +28,9 @@ class PolicyGuardPipeline:
         self.index = None
         self.chunks = []
         self.loaded_documents = []
+
+        # Conflict scan results: {filename: [conflict_dicts]}
+        self.scan_results = {}
 
         # Session
         self.session_id = str(uuid.uuid4())[:8]
@@ -72,6 +76,24 @@ class PolicyGuardPipeline:
             log_document(filename, pages, len(chunks), file_size_kb)
         except Exception as e:
             print(f"⚠️ Warning: could not log document to database: {e}")
+
+        # Proactive conflict scan — only if other documents already exist
+        prior_chunks = [c for c in self.chunks if c["source"] != filename]
+        if prior_chunks:
+            print(f"🔍 Running conflict scan for {filename}...")
+            try:
+                conflicts = scan_for_conflicts(chunks, filename, self.chunks)
+                self.scan_results[filename] = conflicts
+                if conflicts:
+                    print(f"⚠️ {len(conflicts)} conflict(s) detected in {filename}")
+                else:
+                    print(f"✅ No conflicts detected in {filename}")
+            except Exception as e:
+                print(f"⚠️ Conflict scan failed: {e}")
+                self.scan_results[filename] = []
+        else:
+            # First document — nothing to compare against
+            self.scan_results[filename] = []
 
     def ask(self, question, employee_type=None, issue_category=None, anonymous=False):
         """
@@ -219,6 +241,7 @@ class PolicyGuardPipeline:
         self.index = None
         self.chunks = []
         self.loaded_documents = []
+        self.scan_results = {}
         self.reset_session()
 
     @property
