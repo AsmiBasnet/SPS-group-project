@@ -50,42 +50,84 @@ if "role" not in st.session_state:
     st.session_state.role = None
 
 if not st.session_state.logged_in:
-    st.title("🛡️ PolicyGuard")
-    st.subheader("Sign In")
-    st.caption("HR Compliance Intelligence Agent — Local & Private")
+    # ── Hero ────────────────────────────────────
+    st.markdown(
+        """
+        <div style="text-align:center; padding: 32px 0 16px 0;">
+            <div style="font-size:56px;">🛡️</div>
+            <h1 style="font-size:2.8rem; font-weight:900; margin:8px 0 4px 0;">
+                PolicyGuard
+            </h1>
+            <p style="font-size:1.1rem; color:#666; margin:0;">
+                HR Compliance Intelligence — 100% Local &amp; Private
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ── Login form (centred column) ──────────────
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="e.g. employee")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button(
+                "Sign In →", use_container_width=True, type="primary"
+            )
+
+        if submitted:
+            user = USERS.get(username)
+            if user and user["password"] == password:
+                st.session_state.logged_in = True
+                st.session_state.role = user["role"]
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+
     st.divider()
 
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button(
-            "Sign In", use_container_width=True, type="primary"
-        )
-
-    if submitted:
-        user = USERS.get(username)
-        if user and user["password"] == password:
-            st.session_state.logged_in = True
-            st.session_state.role = user["role"]
-            st.rerun()
-        else:
-            st.error("Invalid username or password.")
-
-    st.divider()
-    st.caption("**Demo accounts:**")
+    # ── Demo account cards ───────────────────────
+    st.markdown(
+        "<p style='text-align:center; color:#888; font-size:13px;'>"
+        "Demo accounts</p>",
+        unsafe_allow_html=True
+    )
     col1, col2, col3 = st.columns(3)
+    card_style = (
+        "background:#f8f9fa; border:1px solid #e0e0e0; border-radius:12px; "
+        "padding:16px 20px; text-align:center;"
+    )
     with col1:
-        st.caption("🔐 **Policy Admin**")
-        st.caption("`policy_admin` / `admin123`")
-        st.caption("Upload docs · Dashboard · Chat")
+        st.markdown(
+            f'<div style="{card_style}">'
+            '<div style="font-size:28px;">🔐</div>'
+            '<b>Policy Admin</b><br>'
+            '<code>policy_admin / admin123</code><br>'
+            '<small style="color:#888;">Upload · Dashboard · Chat</small>'
+            "</div>",
+            unsafe_allow_html=True
+        )
     with col2:
-        st.caption("👔 **HR Manager**")
-        st.caption("`hr_manager` / `hr123`")
-        st.caption("Dashboard · Chat")
+        st.markdown(
+            f'<div style="{card_style}">'
+            '<div style="font-size:28px;">👔</div>'
+            '<b>HR Manager</b><br>'
+            '<code>hr_manager / hr123</code><br>'
+            '<small style="color:#888;">Dashboard · Chat</small>'
+            "</div>",
+            unsafe_allow_html=True
+        )
     with col3:
-        st.caption("👤 **Employee**")
-        st.caption("`employee` / `emp123`")
-        st.caption("Chat only")
+        st.markdown(
+            f'<div style="{card_style}">'
+            '<div style="font-size:28px;">👤</div>'
+            '<b>Employee</b><br>'
+            '<code>employee / emp123</code><br>'
+            '<small style="color:#888;">Chat · Anonymous Mode</small>'
+            "</div>",
+            unsafe_allow_html=True
+        )
     st.stop()
 
 # ── Initialize Pipeline ──────────────────────────
@@ -271,33 +313,46 @@ if page == "💬 Policy Chat":
         decision = result["decision"]
         is_anon  = item.get("anonymous", False)
 
-        # Privacy badge — shown when the query was submitted anonymously
-        if is_anon:
-            st.markdown(
-                '<span style="'
-                'background:#1a1a2e; color:#a0c4ff; '
-                'border:1px solid #3a6fa0; border-radius:20px; '
-                'padding:2px 10px; font-size:11px; font-weight:600;">'
-                '🕵️ Anonymous Query — identity not stored'
-                '</span>',
-                unsafe_allow_html=True
-            )
+        # ── Question bubble ──────────────────────
+        anon_badge = (
+            '<span style="background:#1a1a2e;color:#a0c4ff;border:1px solid #3a6fa0;'
+            'border-radius:20px;padding:1px 10px;font-size:11px;font-weight:600;'
+            'margin-left:8px;">🕵️ anonymous</span>'
+            if is_anon else ""
+        )
+        st.markdown(
+            f'<div style="background:#f0f4ff;border-left:4px solid #4a6cf7;'
+            f'border-radius:8px;padding:12px 16px;margin-bottom:8px;">'
+            f'<b>You</b>{anon_badge}<br>{item["question"]}</div>',
+            unsafe_allow_html=True
+        )
 
-        st.markdown(f"**You:** {item['question']}")
-
+        # ── Response card ────────────────────────
         if decision == "ANSWER":
             confidence = result.get("confidence", "MEDIUM")
-            icons = {"HIGH": "🟢", "MEDIUM": "🟡", "LOW": "🔴"}
-            st.success(
-                f"✅ **Answer** — Evidence Strength: "
-                f"{icons.get(confidence,'🟡')} {confidence}"
+            conf_color = {"HIGH": "#2d6a4f", "MEDIUM": "#e76f51", "LOW": "#c9184a"}.get(
+                confidence, "#555"
             )
-            st.write(result["answer"])
-            st.info(
-                f"📄 **Citation:** {result['citation']}  \n"
-                f"🔍 **Score:** {result.get('top_score',0):.3f}  \n"
-                f"⏱️ **Time:** {result.get('latency',0):.1f}s"
+            conf_icon  = {"HIGH": "🟢", "MEDIUM": "🟡", "LOW": "🔴"}.get(confidence, "🟡")
+            st.markdown(
+                f'<div style="background:#f0fff4;border:1px solid #b7e4c7;'
+                f'border-radius:12px;padding:16px 20px;margin-bottom:4px;">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                f'margin-bottom:8px;">'
+                f'<span style="font-weight:700;color:#1b4332;">✅ Policy Answer</span>'
+                f'<span style="background:{conf_color};color:#fff;border-radius:20px;'
+                f'padding:2px 10px;font-size:12px;">{conf_icon} {confidence} confidence</span>'
+                f'</div>'
+                f'<p style="margin:0 0 10px 0;">{result["answer"]}</p>'
+                f'<div style="font-size:12px;color:#555;border-top:1px solid #b7e4c7;'
+                f'padding-top:8px;">'
+                f'📄 <b>Citation:</b> {result["citation"]} &nbsp;|&nbsp; '
+                f'🔍 <b>Score:</b> {result.get("top_score",0):.3f} &nbsp;|&nbsp; '
+                f'⏱️ <b>Time:</b> {result.get("latency",0):.1f}s'
+                f'</div></div>',
+                unsafe_allow_html=True
             )
+            st.caption("⚠️ Policy guidance only — not legal advice. Verify before acting.")
             with st.expander("🔍 View Logic Trace"):
                 st.json({
                     "decision":         result["decision"],
@@ -309,20 +364,33 @@ if page == "💬 Policy Chat":
                     "latency_seconds":  result.get("latency"),
                     "chunks_searched":  len(result.get("retrieved_chunks", []))
                 })
-            st.warning("⚠️ Policy guidance only — not legal advice. Verify before acting.")
 
         elif decision == "CLARIFY":
-            st.info("🔵 **Clarification Needed**")
-            st.write(result.get("clarification_question", "Please provide more context."))
+            st.markdown(
+                '<div style="background:#e8f4fd;border:1px solid #90caf9;'
+                'border-radius:12px;padding:16px 20px;margin-bottom:4px;">'
+                '<span style="font-weight:700;color:#0d47a1;">🔵 More info needed</span><br>'
+                f'{result.get("clarification_question","Please provide more context.")}'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
         elif decision == "FLAG_CONFLICT":
-            severity = result.get("conflict_severity", "RED")
-            sev_icons = {"RED": "🔴", "YELLOW": "🟡", "GREEN": "🟢"}
-            st.error(
-                f"{sev_icons.get(severity,'🔴')} **Policy Conflict Detected** "
-                f"— Severity: {severity}"
+            severity   = result.get("conflict_severity", "RED")
+            sev_colors = {"RED": ("#fff5f5","#ffb3b3","#c9184a"),
+                          "YELLOW": ("#fffbea","#ffe082","#f57f17"),
+                          "GREEN":  ("#f0fff4","#b7e4c7","#2d6a4f")}
+            bg, border, txt = sev_colors.get(severity, sev_colors["RED"])
+            sev_icon = {"RED":"🔴","YELLOW":"🟡","GREEN":"🟢"}.get(severity,"🔴")
+            st.markdown(
+                f'<div style="background:{bg};border:1px solid {border};'
+                f'border-radius:12px;padding:16px 20px;margin-bottom:4px;">'
+                f'<span style="font-weight:700;color:{txt};">'
+                f'{sev_icon} Policy Conflict Detected — Severity: {severity}</span><br>'
+                f'{result["answer"]}'
+                f'</div>',
+                unsafe_allow_html=True
             )
-            st.write(result["answer"])
             if result.get("conflict_clause_a"):
                 c1, c2 = st.columns(2)
                 with c1:
@@ -334,11 +402,15 @@ if page == "💬 Policy Chat":
             st.error("⚠️ Do not act — escalate to HR Director immediately.")
 
         elif decision == "REFUSED":
-            st.warning("🛑 **Cannot Answer**")
-            st.write(result["answer"])
-            st.caption(
-                f"Evidence score: {result.get('top_score',0):.3f} "
-                f"(minimum required: 0.65)"
+            st.markdown(
+                '<div style="background:#fff8e1;border:1px solid #ffe082;'
+                'border-radius:12px;padding:16px 20px;margin-bottom:4px;">'
+                '<span style="font-weight:700;color:#e65100;">🛑 Insufficient Evidence</span><br>'
+                f'{result["answer"]}<br>'
+                f'<small style="color:#888;">Evidence score: {result.get("top_score",0):.3f} '
+                f'(minimum required: 0.65)</small>'
+                '</div>',
+                unsafe_allow_html=True
             )
 
         st.divider()
