@@ -1,38 +1,41 @@
 # ================================================
 # PolicyGuard — ngrok tunnel
-# Run this to get a public URL for your professor
 # Usage: python share.py
 # ================================================
 
 from pyngrok import ngrok
-import time
 import os
+from dotenv import load_dotenv
 
-print("=" * 50)
+load_dotenv()
+
+print("=" * 55)
 print("  PolicyGuard — Public Share")
-print("=" * 50)
+print("=" * 55)
 
-# Read auth token from env if set
 auth_token = os.getenv("NGROK_AUTH_TOKEN")
 if auth_token:
     ngrok.set_auth_token(auth_token)
 
-# Open tunnel to the running app on port 8501
 print("\nOpening tunnel to http://localhost:8501 ...")
 tunnel = ngrok.connect(8501, "http")
 
-print("\n✅ Your public URL is:")
-print(f"\n   👉  {tunnel.public_url}\n")
-print("Share this URL with your professor.")
+public_url = tunnel.public_url
+share_url  = public_url + "/?ngrok-skip-browser-warning=true"
+
+print("\n✅ Tunnel is live!\n")
+print(f"   Your URL   : {public_url}")
+print(f"   Share this : {share_url}")
+print("\nSend the 'Share this' link to your professor.")
 print("The tunnel stays open as long as this script runs.")
-print("\nPress Ctrl+C to stop sharing.\n")
-print("=" * 50)
+print("\nPress Ctrl+C to stop.\n")
+print("=" * 55)
 
 try:
-    while True:
-        time.sleep(1)
+    input()
 except KeyboardInterrupt:
-    print("\nClosing tunnel...")
-    ngrok.disconnect(tunnel.public_url)
+    pass
+finally:
+    ngrok.disconnect(public_url)
     ngrok.kill()
-    print("✅ Tunnel closed.")
+    print("\n✅ Tunnel closed.")
