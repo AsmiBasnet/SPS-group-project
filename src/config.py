@@ -34,7 +34,15 @@ DB_PATH = os.getenv("DB_PATH", "logs/policygard.db")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # User accounts — role : (username, password)
+# Three roles:
+#   policy_admin → upload docs + full dashboard + chat
+#   hr_manager   → chat + dashboard (read-only, no upload)
+#   employee     → chat only
 USERS = {
+    os.getenv("POLICY_ADMIN_USER", "policy_admin"): {
+        "password": os.getenv("POLICY_ADMIN_PASS", "admin123"),
+        "role":     "Policy Admin"
+    },
     os.getenv("HR_MANAGER_USER", "hr_manager"): {
         "password": os.getenv("HR_MANAGER_PASS", "hr123"),
         "role":     "HR Manager"
@@ -44,6 +52,9 @@ USERS = {
         "role":     "Employee"
     }
 }
+
+# Folder where pre-approved policies live
+POLICIES_FOLDER = os.getenv("POLICIES_FOLDER", "policies")
 
 # Supported documents
 SUPPORTED_POLICIES = [
