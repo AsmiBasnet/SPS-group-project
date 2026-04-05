@@ -21,6 +21,9 @@ data/
 logs/faiss_index/
 logs/chroma_db/
 
+# Policy documents — company-specific, never commit
+policies/
+
 # Database (keep logs/ folder but ignore the db file)
 logs/*.db
 
