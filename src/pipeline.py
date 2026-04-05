@@ -24,11 +24,6 @@ class PolicyGuardPipeline:
         # Initialize database
         init_database()
 
-        # Index and chunks
-        self.index = None
-        self.chunks = []
-        self.loaded_documents = []
-
         # Conflict scan results: {filename: [conflict_dicts]}
         self.scan_results = {}
 
@@ -42,6 +37,46 @@ class PolicyGuardPipeline:
             "conflict_flagged": False,
             "query_count": 0
         }
+
+        # Restore persisted ChromaDB index automatically
+        # so users don't need to re-upload on every login
+        self.index, self.chunks = load_index()
+
+        # Rebuild loaded_documents metadata from DB records
+        self.loaded_documents = self._restore_loaded_documents()
+
+    def _restore_loaded_documents(self):
+        """
+        Rebuild the in-memory loaded_documents list from:
+          1. ChromaDB chunks (source of truth for what's indexed)
+          2. DB active documents (for metadata like chunk counts)
+        Called once at startup — makes re-login transparent.
+        """
+        from src.database import get_all_active_documents
+        if not self.chunks:
+            return []
+
+        # Unique filenames present in the restored chunks
+        indexed_sources = list(dict.fromkeys(
+            c["source"] for c in self.chunks
+        ))
+
+        # Enrich with DB metadata where available
+        db_docs = {d["filename"]: d for d in get_all_active_documents()}
+
+        loaded = []
+        for src in indexed_sources:
+            chunk_count = sum(1 for c in self.chunks if c["source"] == src)
+            db = db_docs.get(src, {})
+            loaded.append({
+                "filename": src,
+                "chunks":   chunk_count,
+                "path":     db.get("source_path", "")
+            })
+
+        if loaded:
+            print(f"✅ Restored {len(loaded)} document(s) from persisted index")
+        return loaded
 
     def load_document(self, file_path, file_size_kb=0):
         """Load a single PDF document into the pipeline."""
