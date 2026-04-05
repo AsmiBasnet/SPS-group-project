@@ -97,6 +97,8 @@ if "staged_files" not in st.session_state:
     st.session_state.staged_files = {}    # filename → {bytes, size_kb}
 if "auto_loaded" not in st.session_state:
     st.session_state.auto_loaded = False
+if "anonymous_mode" not in st.session_state:
+    st.session_state.anonymous_mode = False
 
 # ── A3: Auto-load from /policies folder ──────────
 # Runs once per session at startup
@@ -153,6 +155,25 @@ with st.sidebar:
     )
 
     st.divider()
+
+    # Anonymous mode toggle (Policy Chat only — not relevant on Dashboard)
+    if page == "💬 Policy Chat":
+        anon_on = st.toggle(
+            "🕵️ Anonymous Mode",
+            value=st.session_state.anonymous_mode,
+            help=(
+                "Your session ID will NOT be stored with your query. "
+                "Responses are still logged for aggregate analytics "
+                "but cannot be traced back to you."
+            )
+        )
+        if anon_on != st.session_state.anonymous_mode:
+            st.session_state.anonymous_mode = anon_on
+            st.rerun()
+        if st.session_state.anonymous_mode:
+            st.caption("🔒 Identity hidden — queries logged anonymously.")
+
+        st.divider()
 
     # Knowledge base status
     st.subheader("📁 Knowledge Base")
@@ -231,19 +252,34 @@ if page == "💬 Policy Chat":
     if submitted and question.strip():
         with st.spinner("Searching policy documents..."):
             result = st.session_state.pipeline.ask(
-                question, employee_type, issue_category
+                question, employee_type, issue_category,
+                anonymous=st.session_state.anonymous_mode
             )
         st.session_state.chat_history.append({
-            "question":      question,
-            "employee_type": employee_type,
-            "issue_category":issue_category,
-            "result":        result
+            "question":       question,
+            "employee_type":  employee_type,
+            "issue_category": issue_category,
+            "result":         result,
+            "anonymous":      st.session_state.anonymous_mode
         })
 
     # Chat history
     for item in reversed(st.session_state.chat_history):
         result   = item["result"]
         decision = result["decision"]
+        is_anon  = item.get("anonymous", False)
+
+        # Privacy badge — shown when the query was submitted anonymously
+        if is_anon:
+            st.markdown(
+                '<span style="'
+                'background:#1a1a2e; color:#a0c4ff; '
+                'border:1px solid #3a6fa0; border-radius:20px; '
+                'padding:2px 10px; font-size:11px; font-weight:600;">'
+                '🕵️ Anonymous Query — identity not stored'
+                '</span>',
+                unsafe_allow_html=True
+            )
 
         st.markdown(f"**You:** {item['question']}")
 
