@@ -40,13 +40,6 @@ def init_database():
             )
         """)
 
-        # Add anonymous column to existing databases (no-op if already present)
-        try:
-            cursor.execute(
-                "ALTER TABLE queries ADD COLUMN anonymous INTEGER DEFAULT 0"
-            )
-        except Exception:
-            pass  # Column already exists
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS documents (
@@ -60,6 +53,18 @@ def init_database():
                 status TEXT DEFAULT 'active'
             )
         """)
+
+        # Migrate existing databases — add columns if they don't exist yet
+        migrations = [
+            "ALTER TABLE queries ADD COLUMN anonymous INTEGER DEFAULT 0",
+            "ALTER TABLE documents ADD COLUMN version INTEGER DEFAULT 1",
+            "ALTER TABLE documents ADD COLUMN status TEXT DEFAULT 'active'",
+        ]
+        for sql in migrations:
+            try:
+                cursor.execute(sql)
+            except Exception:
+                pass  # Column already exists — safe to ignore
 
         conn.commit()
         conn.close()
