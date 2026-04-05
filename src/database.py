@@ -35,9 +35,18 @@ def init_database():
                 latency_seconds REAL,
                 guardrail_triggered INTEGER DEFAULT 0,
                 conflict_severity TEXT,
-                sources TEXT
+                sources TEXT,
+                anonymous INTEGER DEFAULT 0
             )
         """)
+
+        # Add anonymous column to existing databases (no-op if already present)
+        try:
+            cursor.execute(
+                "ALTER TABLE queries ADD COLUMN anonymous INTEGER DEFAULT 0"
+            )
+        except Exception:
+            pass  # Column already exists
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS documents (
@@ -70,9 +79,15 @@ def log_query(
     session_id=None,
     guardrail_triggered=False,
     conflict_severity=None,
-    retrieved_chunks=None
+    retrieved_chunks=None,
+    anonymous=False
 ):
-    """Log every query to SQLite database."""
+    """Log every query to SQLite database.
+
+    When anonymous=True the session_id is replaced with 'anonymous'
+    so no identity is stored — the query pattern is still logged for
+    aggregate analytics but cannot be traced to an individual.
+    """
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -82,17 +97,20 @@ def log_query(
         if retrieved_chunks:
             sources = list(set([c["source"] for c in retrieved_chunks]))
 
+        # Strip identity when anonymous mode is enabled
+        logged_session_id = "anonymous" if anonymous else session_id
+
         cursor.execute("""
             INSERT INTO queries (
                 timestamp, session_id, question,
                 employee_type, issue_category,
                 decision, answer, citation,
                 confidence, top_score, latency_seconds,
-                guardrail_triggered, conflict_severity, sources
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                guardrail_triggered, conflict_severity, sources, anonymous
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             datetime.now().isoformat(),
-            session_id,
+            logged_session_id,
             question,
             employee_type,
             issue_category,
@@ -104,7 +122,8 @@ def log_query(
             round(latency, 2),
             1 if guardrail_triggered else 0,
             conflict_severity,
-            json.dumps(sources)
+            json.dumps(sources),
+            1 if anonymous else 0
         ))
 
         conn.commit()

@@ -73,7 +73,7 @@ class PolicyGuardPipeline:
         except Exception as e:
             print(f"⚠️ Warning: could not log document to database: {e}")
 
-    def ask(self, question, employee_type=None, issue_category=None):
+    def ask(self, question, employee_type=None, issue_category=None, anonymous=False):
         """
         Main entry point — process a policy question.
         Returns structured response with decision and metadata.
@@ -137,7 +137,8 @@ class PolicyGuardPipeline:
                     question, employee_type, issue_category,
                     result, latency, self.session_id,
                     guardrail_triggered=True,
-                    retrieved_chunks=retrieved
+                    retrieved_chunks=retrieved,
+                    anonymous=anonymous
                 )
             except Exception as e:
                 print(f"⚠️ Warning: could not log query to database: {e}")
@@ -193,7 +194,8 @@ class PolicyGuardPipeline:
                 result, latency, self.session_id,
                 guardrail_triggered=False,
                 conflict_severity=conflict_severity,
-                retrieved_chunks=retrieved
+                retrieved_chunks=retrieved,
+                anonymous=anonymous
             )
         except Exception as e:
             print(f"⚠️ Warning: could not log query to database: {e}")
