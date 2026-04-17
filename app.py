@@ -334,16 +334,23 @@ if page == "💬 Policy Chat":
                 confidence, "#555"
             )
             conf_icon  = {"HIGH": "🟢", "MEDIUM": "🟡", "LOW": "🔴"}.get(confidence, "🟡")
+            reasoning  = result.get("reasoning", "")
             st.markdown(
                 f'<div style="background:#f0fff4;border:1px solid #b7e4c7;'
                 f'border-radius:12px;padding:16px 20px;margin-bottom:4px;">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                f'margin-bottom:8px;">'
+                f'margin-bottom:10px;">'
                 f'<span style="font-weight:700;color:#1b4332;">✅ Policy Answer</span>'
                 f'<span style="background:{conf_color};color:#fff;border-radius:20px;'
                 f'padding:2px 10px;font-size:12px;">{conf_icon} {confidence} confidence</span>'
                 f'</div>'
-                f'<p style="margin:0 0 10px 0;">{result["answer"]}</p>'
+                f'<p style="margin:0 0 12px 0;font-size:15px;">{result["answer"]}</p>'
+                + (
+                f'<div style="background:#e8f5e9;border-radius:8px;padding:10px 14px;'
+                f'margin-bottom:10px;font-size:13px;color:#2d5a3d;">'
+                f'<b>🧠 Reasoning:</b> {reasoning}'
+                f'</div>' if reasoning else ""
+                ) +
                 f'<div style="font-size:12px;color:#555;border-top:1px solid #b7e4c7;'
                 f'padding-top:8px;">'
                 f'📄 <b>Citation:</b> {result["citation"]} &nbsp;|&nbsp; '
@@ -353,7 +360,7 @@ if page == "💬 Policy Chat":
                 unsafe_allow_html=True
             )
             st.caption("⚠️ Policy guidance only — not legal advice. Verify before acting.")
-            with st.expander("🔍 View Logic Trace"):
+            with st.expander("🔍 View Full Logic Trace"):
                 st.json({
                     "decision":         result["decision"],
                     "confidence":       result["confidence"],
