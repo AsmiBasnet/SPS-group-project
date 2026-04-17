@@ -76,6 +76,8 @@ def read_pdf(file_path):
 
     total_pages = len(doc)   # capture BEFORE loop
 
+    chunk_counter = 0   # simple global counter — guarantees unique IDs
+
     for page_num, page in enumerate(doc):
         raw_text = page.get_text().strip()
 
@@ -104,12 +106,13 @@ def read_pdf(file_path):
                 if len(chunk_text) < 100:
                     continue
 
+                # Use counter as final discriminator — guaranteed unique per doc
                 chunk_id = (
                     f"{os.path.basename(file_path)}"
                     f"_p{page_num+1}"
-                    f"_s{re.sub(r'[^a-z0-9]', '', heading.lower())[:12] or 'sec'}"
-                    f"_c{i}"
+                    f"_{chunk_counter}"
                 )
+                chunk_counter += 1
 
                 chunks.append({
                     "text":        chunk_text,
