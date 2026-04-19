@@ -68,10 +68,10 @@ def init_database():
 
         conn.commit()
         conn.close()
-        print("✅ Database initialized")
+        print("[OK] Database initialized")
 
     except Exception as e:
-        print(f"❌ Database initialization failed: {e}")
+        print(f"[ERROR] Database initialization failed: {e}")
         raise
 
 
@@ -135,7 +135,7 @@ def log_query(
         conn.close()
 
     except Exception as e:
-        print(f"❌ log_query failed: {e}")
+        print(f"[ERROR] log_query failed: {e}")
         # Re-raise so the pipeline's try/except can decide whether to surface it
         raise
 
@@ -184,11 +184,11 @@ def log_document(filename, pages, chunks, file_size_kb):
         conn.close()
 
         if version > 1:
-            print(f"📄 {filename} — version {version} uploaded (previous marked superseded)")
+            print(f"[FILE] {filename} — version {version} uploaded (previous marked superseded)")
         return version
 
     except Exception as e:
-        print(f"❌ log_document failed: {e}")
+        print(f"[ERROR] log_document failed: {e}")
         raise
 
 
@@ -217,7 +217,7 @@ def get_document_versions(filename):
             for r in rows
         ]
     except Exception as e:
-        print(f"❌ get_document_versions failed: {e}")
+        print(f"[ERROR] get_document_versions failed: {e}")
         return []
 
 
@@ -246,7 +246,7 @@ def get_all_active_documents():
             for r in rows
         ]
     except Exception as e:
-        print(f"❌ get_all_active_documents failed: {e}")
+        print(f"[ERROR] get_all_active_documents failed: {e}")
         return []
 
 
@@ -312,5 +312,5 @@ def get_analytics():
         }
 
     except Exception as e:
-        print(f"❌ get_analytics failed: {e}")
+        print(f"[ERROR] get_analytics failed: {e}")
         raise
