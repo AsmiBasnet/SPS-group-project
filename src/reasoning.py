@@ -52,18 +52,19 @@ def reason(question, retrieved_chunks, session_context=""):
     """
     context    = _build_context(retrieved_chunks)
     session_str = (
-        f"Previous context: {session_context}\n" if session_context else ""
+        f"SESSION CONTEXT & HISTORY:\n{session_context}\n" if session_context else ""
     )
 
     prompt = f"""You are an HR policy compliance assistant. Think step by step.
 
-{session_str}EMPLOYEE QUESTION: {question}
+{session_str}
+CURRENT EMPLOYEE QUESTION: {question}
 
 POLICY CONTEXT:
 {context}
 
 Follow these steps before answering:
-1. What exactly is the employee asking about?
+1. What exactly is the employee asking about (considering the conversation history)?
 2. Which clause in the context directly addresses this?
 3. Do any clauses contradict each other on this topic?
 4. Is there clear enough evidence in the context to answer? (yes/no)

@@ -35,7 +35,8 @@ class PolicyGuardPipeline:
             "clauses_cited": [],
             "clarifications_asked": [],
             "conflict_flagged": False,
-            "query_count": 0
+            "query_count": 0,
+            "history": []
         }
 
         # Restore persisted ChromaDB index automatically
@@ -160,14 +161,27 @@ class PolicyGuardPipeline:
         if self.session["clauses_cited"]:
             session_context += (
                 f"Previously discussed: "
-                f"{', '.join(self.session['clauses_cited'][-3:])}."
+                f"{', '.join(self.session['clauses_cited'])}.\n"
             )
+        
+        if self.session.get("history"):
+            history_str = "\n\n".join([
+                f"User: {h['question']}\nAssistant: {h['answer']}" 
+                for h in self.session["history"]
+            ])
+            session_context += f"\n--- ENTIRE CHAT HISTORY ---\n{history_str}\n---------------------------\n"
 
         # Start timer
         start_time = time.time()
 
         # Step 1 — Retrieve relevant chunks
-        retrieved = search(question, self.index, self.chunks)
+        # Augment search query with the last question to provide context for follow-ups
+        search_query = question
+        if self.session.get("history"):
+            last_q = self.session["history"][-1]["question"]
+            search_query = f"{last_q} - {question}"
+            
+        retrieved = search(search_query, self.index, self.chunks)
 
         # Step 2 — Guardrail: check evidence strength
         evidence_ok, evidence_msg = check_evidence_strength(retrieved)
@@ -229,6 +243,11 @@ class PolicyGuardPipeline:
             if q:
                 self.session["clarifications_asked"].append(q)
 
+        self.session.setdefault("history", []).append({
+            "question": question,
+            "answer": llm_result.get("answer", "No answer provided.")
+        })
+
         # Calculate latency
         latency = time.time() - start_time
 
@@ -268,7 +287,8 @@ class PolicyGuardPipeline:
             "clauses_cited": [],
             "clarifications_asked": [],
             "conflict_flagged": False,
-            "query_count": 0
+            "query_count": 0,
+            "history": []
         }
 
     def clear_documents(self):
