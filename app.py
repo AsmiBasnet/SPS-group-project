@@ -30,6 +30,129 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ── Global CSS — hide Streamlit chrome, custom brand ──
+st.markdown("""
+<style>
+/* Hide Streamlit default elements */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {display: none;}
+
+/* App background */
+.stApp {
+    background-color: #f5f6fa;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border-right: 1px solid #2a2a4a;
+}
+[data-testid="stSidebar"] * {
+    color: #e0e0e0 !important;
+}
+[data-testid="stSidebar"] .stButton button {
+    background: #2a2a4a;
+    color: #ffffff !important;
+    border: 1px solid #3a3a6a;
+    border-radius: 8px;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+    background: #3a3a6a;
+    border-color: #4a6cf7;
+}
+
+/* Radio buttons in sidebar */
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    color: #cccccc !important;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+    background: #2a2a4a;
+}
+
+/* Main content cards */
+[data-testid="stForm"] {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e8e8e8;
+}
+
+/* Primary buttons */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #4a6cf7 0%, #6a3de8 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 10px 24px;
+    transition: opacity 0.2s;
+}
+.stButton > button[kind="primary"]:hover {
+    opacity: 0.9;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #e8e8e8;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+}
+
+/* Dividers */
+hr {
+    border-color: #e8e8e8;
+}
+
+/* Input fields */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea {
+    border-radius: 8px;
+    border: 1.5px solid #e0e0e0;
+    background: #fafafa;
+}
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {
+    border-color: #4a6cf7;
+    box-shadow: 0 0 0 3px rgba(74,108,247,0.1);
+}
+
+/* Selectbox */
+[data-testid="stSelectbox"] > div > div {
+    border-radius: 8px;
+    border: 1.5px solid #e0e0e0;
+}
+
+/* Info/success/error boxes */
+[data-testid="stAlert"] {
+    border-radius: 10px;
+}
+
+/* Page title */
+h1 {
+    font-weight: 800;
+    color: #1a1a2e;
+}
+h2, h3 {
+    color: #2a2a4a;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Role helpers ─────────────────────────────────
 ROLE_ICONS = {
     "Policy Admin": "🔐",
