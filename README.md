@@ -100,19 +100,27 @@ Open http://localhost:8501.
 
 ### Option B: React + FastAPI
 
-```bash
-uvicorn backend.main:app --reload --port 8000
-```
+Use three terminals, started in this order.
 
-In a second terminal:
+1. Ollama (skip if the Ollama app is already running):
+   ```bash
+   ollama serve
+   ```
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+2. Backend, from the project root with the virtual environment active:
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
+   Wait for `Uvicorn running on http://127.0.0.1:8000`. You can check it with `curl http://localhost:8000/api/health`.
 
-Open http://localhost:5173. The front end calls the API at `http://localhost:8000`.
+3. Front end:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+Open http://localhost:3000. The front end calls the API at `http://localhost:8000`, which must be running first.
 
 ### Docker (Streamlit app)
 
@@ -155,6 +163,14 @@ python evaluate.py
 ```
 
 Results are written to `eval/results.md`. Early development notes and latency measurements are in `logs/experiment_results.md`.
+
+## Troubleshooting
+
+- **`incompatible architecture (have 'x86_64', need 'arm64')` on startup.** The virtual environment (or `frontend/node_modules`) was created on a Mac with a different chip. Don't copy these folders between Intel and Apple-silicon Macs. Delete `venv/` and `frontend/node_modules/` and reinstall (`python3 -m venv venv && pip install -r requirements.txt`, then `npm install` in `frontend/`).
+- **Wrong packages are loaded even with the venv active.** Run `which uvicorn`. It should point inside this project's `venv/`. If not, start the server with `python -m uvicorn backend.main:app --port 8000` from the activated venv.
+- **Every question fails or the app can't answer.** Check that Ollama is running (`curl http://localhost:11434`) and that both models are pulled (`ollama list` should show `qwen3.5:4b` and `nomic-embed-text`).
+- **The first answer is very slow.** Ollama is loading the model into memory. Later answers are faster. On CPU-only machines expect tens of seconds per answer.
+- **The front end loads but login fails.** The backend isn't running on port 8000. Check `curl http://localhost:8000/api/health`.
 
 ## Project structure
 
