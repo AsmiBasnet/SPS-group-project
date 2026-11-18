@@ -16,6 +16,7 @@ from src.guardrails import (
 )
 from src.database import init_database, log_query, log_document
 from src.conflict_scanner import scan_for_conflicts
+from src.agentic_rag import agentic_ask
 
 
 class PolicyGuardPipeline:
@@ -163,10 +164,10 @@ class PolicyGuardPipeline:
                 f"Previously discussed: "
                 f"{', '.join(self.session['clauses_cited'])}.\n"
             )
-        
+
         if self.session.get("history"):
             history_str = "\n\n".join([
-                f"User: {h['question']}\nAssistant: {h['answer']}" 
+                f"User: {h['question']}\nAssistant: {h['answer']}"
                 for h in self.session["history"]
             ])
             session_context += f"\n--- ENTIRE CHAT HISTORY ---\n{history_str}\n---------------------------\n"
@@ -174,50 +175,15 @@ class PolicyGuardPipeline:
         # Start timer
         start_time = time.time()
 
-        # Step 1 — Retrieve relevant chunks
-        # Augment search query with the last question to provide context for follow-ups
-        search_query = question
-        if self.session.get("history"):
-            last_q = self.session["history"][-1]["question"]
-            search_query = f"{last_q} - {question}"
-            
-        retrieved = search(search_query, self.index, self.chunks)
+        # ── Agentic RAG (Phase 1 upgrade) ────────────────────────────────────
+        # Replaces the old: search() → check_evidence_strength() → retry_reason()
+        # The agent now self-heals: if retrieval is poor it rewrites the question
+        # and retries, then grades its own answer before returning.
+        agentic_result = agentic_ask(question, self.index, session_context)
 
-        # Step 2 — Guardrail: check evidence strength
-        evidence_ok, evidence_msg = check_evidence_strength(retrieved)
-
-        if not evidence_ok:
-            latency = time.time() - start_time
-            result = {
-                "decision": "REFUSED",
-                "answer": (
-                    "I cannot find sufficient policy evidence to answer this question. "
-                    "This topic may not be covered in your uploaded documents. "
-                    "Please consult your HR Director directly."
-                ),
-                "citation": "N/A",
-                "reasoning": evidence_msg,
-                "confidence": "NONE",
-                "top_score": retrieved[0]["score"] if retrieved else 0,
-                "latency": round(latency, 1),
-                "retrieved_chunks": retrieved
-            }
-
-            try:
-                log_query(
-                    question, employee_type, issue_category,
-                    result, latency, self.session_id,
-                    guardrail_triggered=True,
-                    retrieved_chunks=retrieved,
-                    anonymous=anonymous
-                )
-            except Exception as e:
-                print(f"⚠️ Warning: could not log query to database: {e}")
-
-            return result
-
-        # Step 3 — LLM Reasoning
-        llm_result = retry_reason(question, retrieved, session_context)
+        # Map agentic result to llm_result shape (same keys as before)
+        retrieved = agentic_result.get("chunks", [])
+        llm_result = agentic_result
 
         # Step 4 — Validate citation for ANSWER
         if llm_result["decision"] == "ANSWER":
@@ -227,7 +193,7 @@ class PolicyGuardPipeline:
                 )
 
         # Step 5 — Get confidence and conflict severity
-        top_score = retrieved[0]["score"]
+        top_score = retrieved[0]["score"] if retrieved else 0.0
         confidence = get_confidence_level(top_score)
         conflict_severity, severity_msg = get_conflict_severity(
             llm_result, retrieved
