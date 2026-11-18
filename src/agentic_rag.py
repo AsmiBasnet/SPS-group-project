@@ -22,6 +22,7 @@ from typing import TypedDict, List, Optional
 from langgraph.graph import StateGraph, END
 
 from src.retriever import search
+from src.hybrid_retriever import hybrid_search
 from src.reasoning import reason
 from src.config import OLLAMA_URL, MODEL_NAME, SIMILARITY_THRESHOLD
 
@@ -47,6 +48,7 @@ class RAGState(TypedDict):
     generation_attempts: int       # how many times we've tried generating
     session_context: str           # conversation history from the session
     index:           object        # ChromaDB collection (passed in, never modified)
+    all_chunks:      List[dict]    # all raw chunks for BM25 keyword search
 
 
 # ── 2. NODES ──────────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ def retrieve_node(state: RAGState) -> dict:
     Calls the existing search() from retriever.py — no changes needed there.
     """
     query = state["rewritten"] if state["rewritten"] else state["question"]
-    chunks = search(query, state["index"], [])  # ChromaDB doesn't need chunks list
+    chunks = hybrid_search(query, state["index"], state["all_chunks"])
 
     print(f"  [retrieve] query='{query[:60]}...' → {len(chunks)} chunks, "
           f"top score={chunks[0]['score'] if chunks else 0:.3f}")
@@ -265,7 +267,7 @@ def build_rag_graph():
 # This is the function pipeline.py will call instead of search() + retry_reason()
 # Same inputs/outputs as before — drop-in replacement.
 
-def agentic_ask(question: str, index, session_context: str = "") -> dict:
+def agentic_ask(question: str, index, session_context: str = "", all_chunks: list = None) -> dict:
     """
     Main entry point for the agentic RAG pipeline.
     Replaces the search() + retry_reason() calls in pipeline.py.
@@ -297,7 +299,8 @@ def agentic_ask(question: str, index, session_context: str = "") -> dict:
         "retrieval_attempts":   0,
         "generation_attempts":  0,
         "session_context":      session_context,
-        "index":                index
+        "index":                index,
+        "all_chunks":           all_chunks or []
     }
 
     print(f"\n🤖 Agentic RAG — question: '{question[:60]}...'")

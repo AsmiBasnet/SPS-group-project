@@ -179,7 +179,7 @@ class PolicyGuardPipeline:
         # Replaces the old: search() → check_evidence_strength() → retry_reason()
         # The agent now self-heals: if retrieval is poor it rewrites the question
         # and retries, then grades its own answer before returning.
-        agentic_result = agentic_ask(question, self.index, session_context)
+        agentic_result = agentic_ask(question, self.index, session_context, self.chunks)
 
         # Map agentic result to llm_result shape (same keys as before)
         retrieved = agentic_result.get("chunks", [])
