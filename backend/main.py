@@ -67,7 +67,8 @@ def ask(req: AskRequest, user=Depends(verify_token)):
         req.question,
         req.employee_type,
         req.issue_category,
-        anonymous=req.anonymous
+        anonymous=req.anonymous,
+        user=user["username"]
     )
     return AskResponse(**{
         k: result.get(k, "") for k in AskResponse.model_fields

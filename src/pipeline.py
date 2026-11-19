@@ -17,6 +17,7 @@ from src.guardrails import (
 from src.database import init_database, log_query, log_document
 from src.conflict_scanner import scan_for_conflicts
 from src.agentic_rag import agentic_ask
+from src.memory_manager import save_memory, get_memories
 
 
 class PolicyGuardPipeline:
@@ -132,7 +133,7 @@ class PolicyGuardPipeline:
             # First document — nothing to compare against
             self.scan_results[filename] = []
 
-    def ask(self, question, employee_type=None, issue_category=None, anonymous=False):
+    def ask(self, question, employee_type=None, issue_category=None, anonymous=False, user="anonymous"):
         """
         Main entry point — process a policy question.
         Returns structured response with decision and metadata.
@@ -157,6 +158,12 @@ class PolicyGuardPipeline:
 
         # Build session context string
         session_context = ""
+
+        # Inject long-term memories from mem0 (past sessions)
+        past_memories = get_memories(user_id=user, question=question)
+        if past_memories:
+            session_context += past_memories + "\n\n"
+
         if self.session["employee_type"]:
             session_context += f"Employee type: {self.session['employee_type']}. "
         if self.session["clauses_cited"]:
@@ -213,6 +220,14 @@ class PolicyGuardPipeline:
             "question": question,
             "answer": llm_result.get("answer", "No answer provided.")
         })
+
+        # Save to long-term memory (mem0) — survives server restarts
+        if llm_result.get("answer"):
+            save_memory(
+                user_id=user,
+                question=question,
+                answer=llm_result["answer"]
+            )
 
         # Calculate latency
         latency = time.time() - start_time
