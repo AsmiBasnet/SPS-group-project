@@ -22,9 +22,10 @@ from typing import TypedDict, List, Optional
 from langgraph.graph import StateGraph, END
 
 from src.retriever import search
-from src.hybrid_retriever import hybrid_search
+from src.hybrid_retriever import hybrid_search, rerank
+from src.knowledge_graph import graph_expand
 from src.reasoning import reason
-from src.config import OLLAMA_URL, MODEL_NAME, SIMILARITY_THRESHOLD
+from src.config import OLLAMA_URL, MODEL_NAME, SIMILARITY_THRESHOLD, TOP_K_CHUNKS
 
 
 # ── 1. STATE ──────────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ class RAGState(TypedDict):
     session_context: str           # conversation history from the session
     index:           object        # ChromaDB collection (passed in, never modified)
     all_chunks:      List[dict]    # all raw chunks for BM25 keyword search
+    graph:           object        # networkx DiGraph for graph-expanded retrieval
 
 
 # ── 2. NODES ──────────────────────────────────────────────────────────────────
@@ -65,6 +67,14 @@ def retrieve_node(state: RAGState) -> dict:
     """
     query = state["rewritten"] if state["rewritten"] else state["question"]
     chunks = hybrid_search(query, state["index"], state["all_chunks"])
+
+    # Phase 4: expand with graph-connected chunks, then re-rank the full pool
+    # so the LLM only sees the best TOP_K — not all 30+ graph-expanded chunks
+    expanded = graph_expand(chunks, state.get("graph"), state["all_chunks"])
+    if len(expanded) > len(chunks):
+        chunks = rerank(query, expanded, top_k=TOP_K_CHUNKS)
+    else:
+        chunks = expanded
 
     print(f"  [retrieve] query='{query[:60]}...' → {len(chunks)} chunks, "
           f"top score={chunks[0]['score'] if chunks else 0:.3f}")
@@ -267,7 +277,7 @@ def build_rag_graph():
 # This is the function pipeline.py will call instead of search() + retry_reason()
 # Same inputs/outputs as before — drop-in replacement.
 
-def agentic_ask(question: str, index, session_context: str = "", all_chunks: list = None) -> dict:
+def agentic_ask(question: str, index, session_context: str = "", all_chunks: list = None, graph=None) -> dict:
     """
     Main entry point for the agentic RAG pipeline.
     Replaces the search() + retry_reason() calls in pipeline.py.
@@ -300,7 +310,8 @@ def agentic_ask(question: str, index, session_context: str = "", all_chunks: lis
         "generation_attempts":  0,
         "session_context":      session_context,
         "index":                index,
-        "all_chunks":           all_chunks or []
+        "all_chunks":           all_chunks or [],
+        "graph":                graph
     }
 
     print(f"\n🤖 Agentic RAG — question: '{question[:60]}...'")

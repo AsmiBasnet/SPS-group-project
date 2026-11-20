@@ -18,6 +18,7 @@ from src.database import init_database, log_query, log_document
 from src.conflict_scanner import scan_for_conflicts
 from src.agentic_rag import agentic_ask
 from src.memory_manager import save_memory, get_memories
+from src.knowledge_graph import build_knowledge_graph, save_graph, load_graph
 
 
 class PolicyGuardPipeline:
@@ -44,6 +45,9 @@ class PolicyGuardPipeline:
         # Restore persisted ChromaDB index automatically
         # so users don't need to re-upload on every login
         self.index, self.chunks = load_index()
+
+        # Restore knowledge graph (built after each document upload)
+        self.graph = load_graph()
 
         # Rebuild loaded_documents metadata from DB records
         self.loaded_documents = self._restore_loaded_documents()
@@ -99,6 +103,15 @@ class PolicyGuardPipeline:
 
         # Persist index to disk
         save_index(self.index, self.chunks)
+
+        # Rebuild knowledge graph with all chunks (Phase 4)
+        print(f"🔍 Building knowledge graph for {filename}...")
+        try:
+            self.graph = build_knowledge_graph(self.chunks)
+            save_graph(self.graph)
+        except Exception as e:
+            print(f"⚠️ Knowledge graph build failed: {e}")
+            self.graph = None
 
         # Track loaded document
         filename = os.path.basename(file_path)
@@ -186,7 +199,7 @@ class PolicyGuardPipeline:
         # Replaces the old: search() → check_evidence_strength() → retry_reason()
         # The agent now self-heals: if retrieval is poor it rewrites the question
         # and retries, then grades its own answer before returning.
-        agentic_result = agentic_ask(question, self.index, session_context, self.chunks)
+        agentic_result = agentic_ask(question, self.index, session_context, self.chunks, self.graph)
 
         # Map agentic result to llm_result shape (same keys as before)
         retrieved = agentic_result.get("chunks", [])
